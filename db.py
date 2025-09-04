@@ -25,7 +25,7 @@ def check_or_create_user_db() -> None:
                 exercise_last_review_date   TEXT,
                 exercise_feedback           INTEGER,
                 exercise_src                TEXT,
-                exercise_TEXT,
+                exercise_TEXT
                 ); 
     """
     )
