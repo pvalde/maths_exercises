@@ -8,16 +8,26 @@ from PySide6.QtWidgets import (
     QPlainTextEdit,
     QMessageBox,
 )
-from PySide6.QtCore import Qt, QUrl
-from PySide6.QtGui import QCloseEvent
+from PySide6.QtCore import QUrl
+from PySide6.QtGui import QCloseEvent, QFont, QFontMetrics
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebEngineCore import (
     QWebEngineProfile,
     QWebEngineUrlRequestInterceptor,
     QWebEngineUrlRequestInfo,
 )
+from pathlib import Path
 
-PROGRAM_NAME: str = "Maths Exercises"
+import platformFuns
+
+USER_DIR = platformFuns.get_user_dir()
+# the trailing forward slash is essential. Without it the QtWebEngineView
+# will interpret the base url as a file (?)
+USER_MEDIA_DIR = QUrl.fromLocalFile(platformFuns.get_user_media_dir())
+SRC_DIR = Path(__file__).resolve().parent
+PROGRAM_NAME: str = "Maths Problems"
+MATHJAX4_PATH = "lib/mathjax4/tex-mml-chtml.js"
+MATHJAX3_PATH = "lib/mathjax3/es5/tex-mml-chtml.js"
 
 
 class NoInternetProfile(QWebEngineProfile):
@@ -49,7 +59,7 @@ class NoInternetProfile(QWebEngineProfile):
                 info.block(True)
 
 
-class AddExerciseWindow(QWidget):
+class AddProblemWindow(QWidget):
     """
     Window for adding new 'exercises' to the database.
     """
@@ -59,24 +69,42 @@ class AddExerciseWindow(QWidget):
         self.setWindowTitle(f"{PROGRAM_NAME} - Add New")
         layout = QVBoxLayout()
 
-        # edit fields
+        # print(
+        #     f"MATHJAX4_PATH: {MATHJAX4_PATH}\n",
+        #     f"MATHJAX3_PATH: {MATHJAX3_PATH}\n",
+        #     f"BASE_URL: {USER_MEDIA_DIR}\n",
+        #     f"SRC_DIR: {SRC_DIR}\n",
+        # )
 
-        self.front_label = QLabel("Question")
+        # Front Text ------------------------------------
+        self.front_label = QLabel("Problem")
         self.front_edit = QPlainTextEdit(self)
+        self.front_edit.setFont(QFont("Courier New", 11))
+        # define tab width
+        # TODO: change tabs with spaces
+        self.front_edit.setTabStopDistance(
+            QFontMetrics(self.front_edit.font()).horizontalAdvance(" ") * 2
+        )
 
-        self.back_label = QLabel("Answer")
+        # Back Text ------------------------------------
+        self.back_label = QLabel("Solution")
         self.back_edit = QPlainTextEdit(self)
+        self.back_edit.setFont(QFont("Courier New", 11))
+        # define tab width
+        # TODO: change tabs with spaces
+        self.front_edit.setTabStopDistance(
+            QFontMetrics(self.front_edit.font()).horizontalAdvance(" ") * 2
+        )
 
-        # adding html preview
-
+        # html preview ---------------------------------
         self.html_label = QLabel("Preview")
         self.profile = NoInternetProfile()
-        print("is profile off the record?", self.profile.isOffTheRecord())
         self.html_viewer = QWebEngineView(self.profile)
 
-        self.html_viewer.setHtml("")
+        self.html_viewer.setHtml("<br>")
         # self.html_viewer.load(QUrl("https://www.google.com"))
-        self.front_edit.textChanged.connect(self.on_text_changed)
+        self.front_edit.textChanged.connect(self.update_preview)
+        self.back_edit.textChanged.connect(self.update_preview)
 
         # setting layout
         layout.addWidget(self.front_label)
@@ -88,9 +116,38 @@ class AddExerciseWindow(QWidget):
 
         self.setLayout(layout)
 
-    def on_text_changed(self):
-        self.html_viewer.setHtml("")
-        self.html_viewer.setHtml(self.front_edit.toPlainText())
+    def update_preview(self) -> None:
+        """
+        Updates html preview with contents of self.front_edit and self.back_edit
+        """
+        self.html_viewer.setHtml("<br>")
+        html_header: str = (
+            """<head>
+        <script>
+        MathJax = {
+          tex: {
+            inlineMath: {'[+]': [['$', '$']]}
+          },
+          svg: {
+            fontCache: 'global'
+          }
+        };
+        </script>
+        """
+            + f'<script src="file://{SRC_DIR}/{MATHJAX3_PATH}"></script>'
+            + "</head>"
+        )
+
+        html_content: str = (
+            f"<!DOCTYPE html>\n<html>\n{html_header}\n"
+            f"<body>\n{self.front_edit.toPlainText()}\n"
+            + f"<hr>\n"
+            + f"{self.back_edit.toPlainText()}\n</body>\n</html>"
+        )
+
+        # print(html_content)
+
+        self.html_viewer.setHtml(html_content, baseUrl=USER_MEDIA_DIR)
         self.html_viewer.update()
 
 
@@ -98,8 +155,7 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.add_new_window: AddExerciseWindow | None = None
-        print(self.add_new_window)
+        self.add_new_window: AddProblemWindow | None = None
 
         self.setWindowTitle(f"{PROGRAM_NAME}")
 
@@ -107,18 +163,13 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.container)
 
         self.container_layout = QVBoxLayout(self.container)
-        self.label1 = QLabel("Label 1")
-        self.label2 = QLabel("Label 2")
-
-        self.container_layout.addWidget(self.label1)
-        self.container_layout.addWidget(self.label2)
 
         # add exercise' window
-        self.add_new_exercise_button = QPushButton("Add new exercise")
-        self.add_new_exercise_button.clicked.connect(
-            self.show_add_exercise_window
+        self.add_new_problem_button = QPushButton("Add new problem")
+        self.add_new_problem_button.clicked.connect(
+            self.show_add_problem_window
         )
-        self.container_layout.addWidget(self.add_new_exercise_button)
+        self.container_layout.addWidget(self.add_new_problem_button)
 
         # Menu
         self.menu = self.menuBar()
@@ -128,12 +179,12 @@ class MainWindow(QMainWindow):
         self.file_menu.addAction("Exit", self.close)
 
     def closeEvent(self, event: QCloseEvent):
-        print("when closing, add_new_window is", self.add_new_window)
         if self.add_new_window is not None:
             reply = QMessageBox.question(
                 self,
-                "?",
-                "?",
+                "Warning",
+                "There is an exercise card that has not been saved yet. "
+                + "Would you like to quit anyways?",
                 QMessageBox.Yes | QMessageBox.No,
                 QMessageBox.No,
             )
@@ -144,11 +195,10 @@ class MainWindow(QMainWindow):
             else:
                 event.ignore()
 
-    def show_add_exercise_window(self):
+    def show_add_problem_window(self):
         # avoid destroying the window if it already exists
-        print(self.add_new_exercise_button)
         if self.add_new_window is None:
-            self.add_new_window = AddExerciseWindow()
+            self.add_new_window = AddProblemWindow()
         self.add_new_window.show()
 
 
