@@ -1,0 +1,66 @@
+import sqlite3
+from utils.program_paths import ProgramPaths
+
+
+def check_or_create_user_db() -> None:
+    """
+    Connects to user database. If there is no database, creates one following
+    a given schema.
+    """
+    try:
+        with sqlite3.connect(ProgramPaths.get_user_db_path()) as conn:
+            print(
+                f"Opened SQLite3 database with version {sqlite3.sqlite_version} successfully."
+            )
+            cur = conn.cursor()
+    except sqlite3.OperationalError as e:
+        raise Exception("Failed to open database:", e)
+
+    # TODO: move definition of program's schema to another file (a 'Constants' module)
+    # TODO: resolve the structure of tags in the db (maybe using a middle table?)
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS problems(
+                problem_id                 INTEGER PRIMARY KEY,
+                problem_topic              TEXT,
+                problem_review_count       INTEGER,
+                problem_last_review_date   TEXT,
+                problem_feedback           INTEGER,
+                problem_src                TEXT,
+                problem_deck               INTEGER,
+                problem_content            TEXT,
+                FOREIGN KEY (problem_deck) REFERENCES decks(deck_id)
+                ); 
+    """
+    )
+
+    conn.commit()
+
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS decks(
+                deck_id                 INTEGER PRIMARY KEY,
+                deck_name               TEXT UNIQUE
+                ); 
+    """
+    )
+
+    conn.commit()
+
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS tags(
+                    tag_id                 INTEGER PRIMARY KEY,
+                    tag_name               TEXT UNIQUE
+                    ); 
+        """
+    )
+
+    conn.commit()
+
+    cur.execute(
+        """CREATE TABLE IF NOT EXISTS problems_tags(
+                problem_id              INTEGER,
+                tag_id                  INTEGER,
+                FOREIGN KEY (problem_id) REFERENCES problems(problem_id),
+                FOREIGN KEY (tag_id)    REFERENCES tags(tag_id)
+                );
+    """
+    )
