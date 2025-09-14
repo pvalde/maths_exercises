@@ -2,9 +2,11 @@ from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
     QWidget,
+    QHBoxLayout,
     QVBoxLayout,
     QPushButton,
     QMessageBox,
+    QLabel
 )
 from PySide6.QtGui import QCloseEvent
 from .add_problem import AddProblemWindow
@@ -29,7 +31,10 @@ class MainWindow(QMainWindow):
         self.container = QWidget()
         self.setCentralWidget(self.container)
 
-        self.container_layout = QVBoxLayout(self.container)
+        self.main_container = QVBoxLayout(self.container)
+        self.add_buttons_container = QHBoxLayout()
+
+        self.dummy_label = QLabel("this is a dummy label")
 
         # add deck button
         self.add_new_deck_button = QPushButton("Add new deck")
@@ -41,9 +46,12 @@ class MainWindow(QMainWindow):
             self.show_add_problem_window
         )
 
-        # adding element to container
-        self.container_layout.addWidget(self.add_new_deck_button)
-        self.container_layout.addWidget(self.add_new_problem_button)
+        # adding element to containers
+
+        self.add_buttons_container.addWidget(self.add_new_deck_button)
+        self.add_buttons_container.addWidget(self.add_new_problem_button)
+        self.main_container.addLayout(self.add_buttons_container)
+        self.main_container.addWidget(self.dummy_label)
 
         # Menu
         self.menu = self.menuBar()
