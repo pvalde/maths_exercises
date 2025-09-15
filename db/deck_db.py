@@ -1,5 +1,6 @@
 import sqlite3
 from utils.program_paths import ProgramPaths
+from typing import List, Tuple
 
 
 class DeckDB:
@@ -13,9 +14,6 @@ class DeckDB:
         # connect to user's database.
         try:
             with sqlite3.connect(ProgramPaths.get_user_db_path()) as conn:
-                print(
-                    f"Opened SQLite3 database with version {sqlite3.sqlite_version} successfully."
-                )
                 cur = conn.cursor()
         except sqlite3.OperationalError as e:
             raise Exception("Failed to open database:", e)
@@ -38,9 +36,6 @@ class DeckDB:
         # connect to user's database.
         try:
             with sqlite3.connect(ProgramPaths.get_user_db_path()) as conn:
-                print(
-                    f"Opened SQLite3 database with version {sqlite3.sqlite_version} successfully."
-                )
                 cur = conn.cursor()
         except sqlite3.OperationalError as e:
             raise Exception("Failed to open database:", e)
@@ -54,3 +49,25 @@ class DeckDB:
             raise Exception(f"Error adding new deck to DB: {e}.")
 
         conn.commit()
+
+    @staticmethod
+    def get_decks_all() -> List[str]:
+        # connect to user's database.
+        try:
+            with sqlite3.connect(ProgramPaths.get_user_db_path()) as conn:
+                cur = conn.cursor()
+        except sqlite3.OperationalError as e:
+            raise Exception("Failed to open database:", e)
+        
+        cur.execute(
+            "SELECT deck_name FROM decks"
+        )
+
+        decks: List[Tuple[str]] = cur.fetchall()
+
+        decks_list: List[str] = []
+
+        for tuple in decks:
+            decks_list.append(tuple[0])
+
+        return decks_list

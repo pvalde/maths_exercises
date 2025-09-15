@@ -6,12 +6,13 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QPushButton,
     QMessageBox,
-    QLabel
+    QLabel,
+    QListWidgetItem,
 )
 from PySide6.QtGui import QCloseEvent
+from typing import List
 from .add_problem import AddProblemWindow
-from .add_deck import AddDeckPopup
-
+from .deck import AddDeckPopup, DeckListWidget
 
 # CONSTANTS
 from utils.program_paths import ProgramPaths
@@ -31,8 +32,14 @@ class MainWindow(QMainWindow):
         self.container = QWidget()
         self.setCentralWidget(self.container)
 
+        # containers
         self.main_container = QVBoxLayout(self.container)
         self.add_buttons_container = QHBoxLayout()
+
+        # decks_container
+        self.decks_container = DeckListWidget()
+        self.decks_items: List[QListWidgetItem] = []
+        self.show_decks()
 
         self.dummy_label = QLabel("this is a dummy label")
 
@@ -52,6 +59,7 @@ class MainWindow(QMainWindow):
         self.add_buttons_container.addWidget(self.add_new_problem_button)
         self.main_container.addLayout(self.add_buttons_container)
         self.main_container.addWidget(self.dummy_label)
+        self.main_container.addWidget(self.decks_container)
 
         # Menu
         self.menu = self.menuBar()
@@ -88,9 +96,11 @@ class MainWindow(QMainWindow):
         self.add_new_window.show()
 
     def show_add_deck_dialog(self):
-        self.add_new_deck_popup = AddDeckPopup()
+        self.add_new_deck_popup = AddDeckPopup(self.show_decks)
         self.add_new_deck_popup.show()
-        pass
+
+    def show_decks(self):
+        self.decks_container.show_decks()
 
 
 def initializeGui():
