@@ -1,8 +1,11 @@
+from typing import List
 from PySide6.QtWebEngineCore import (
     QWebEngineProfile,
     QWebEngineUrlRequestInfo,
     QWebEngineUrlRequestInterceptor,
 )
+
+from db.deck_db import DeckDB
 
 
 class NoInternetProfile(QWebEngineProfile):
@@ -32,3 +35,18 @@ class NoInternetProfile(QWebEngineProfile):
             else:
                 # Block all requests
                 info.block(True)
+
+
+class DeckMem:
+    def __init__(self):
+        self._decks: List[str] = DeckDB.get_decks_all()
+
+    @property
+    def decks(self):
+        return self._decks
+
+    def update(self):
+        self._decks = DeckDB.get_decks_all()
+
+
+decks_mem = DeckMem()

@@ -20,6 +20,7 @@ from PySide6.QtGui import (
 from utils.constants import PROGRAM_NAME
 from db.deck_db import DeckDB
 from typing import Callable, List
+from .ui_utils import decks_mem
 
 
 class AddDeckPopup(QWidget):
@@ -80,6 +81,7 @@ class AddDeckPopup(QWidget):
                 )
 
             self.show_function()
+            decks_mem.update()
 
         else:
 
@@ -114,6 +116,7 @@ class DeckListWidget(QListWidget):
         """
         Deletes the current deck from the DB.
         """
+
         # TODO
         print("deleting deck: ", deck_to_delete.text())
 
