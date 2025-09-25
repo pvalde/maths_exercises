@@ -19,14 +19,18 @@ from PySide6.QtGui import (
 )
 from utils.constants import PROGRAM_NAME
 from db.deck_db import DeckDB
-from typing import Callable, List
-from .ui_utils import decks_mem
+from typing import Callable
+from ui.ui_utils import update_decks_from_db
 
 
 class AddDeckPopup(QWidget):
+    """
+    QWidget that works as a popup that prompts the user to add a new deck.
+    """
+
     def __init__(self, show_function: Callable[[], None]):
         super().__init__()
-        self.show_function = show_function
+        self.parent_show_function = show_function
         self.setWindowTitle(f"{PROGRAM_NAME} - Add Deck")
 
         self.main_layout = QVBoxLayout()
@@ -80,8 +84,13 @@ class AddDeckPopup(QWidget):
                     f"The deck '{deck_final_name}' has been added to the DB.",
                 )
 
-            self.show_function()
-            decks_mem.update()
+            self.parent_show_function()
+
+            # turn update deck lists flags on
+            for key in update_decks_from_db.keys():
+                update_decks_from_db[f"{key}"] = True
+
+            self.destroy(True, True)
 
         else:
 
@@ -116,36 +125,28 @@ class DeckListWidget(QListWidget):
         """
         Deletes the current deck from the DB.
         """
-
-        # TODO
+        try:
+            DeckDB.remove_deck(deck_to_delete.text())
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"{e}")
+            return
         print("deleting deck: ", deck_to_delete.text())
+        self.update_list_of_decks_from_db()
 
-    def show_decks(self) -> None:
+    def update_list_of_decks_from_db(self) -> None:
         """
-        Shows the current decks in DB on the GUI.
+        Updates the current list of decks on the GUI according to DB.
         """
-        # TODO: rewrite having in mine the delete of decks
+
+        print("DeckListWidget retrieving list of decks from DB")
+
+        # remove all items from the current list
+        n_of_decks_in_mem = self.count()
+        for i in range(n_of_decks_in_mem):
+            self.takeItem(n_of_decks_in_mem - 1 - i)
 
         # get a list of current decks in DB
-        decks_list = DeckDB.get_decks_all()
+        decks_in_db = sorted(DeckDB.get_decks_all())
 
-        # check if any deck in the DB is already in program's memory
-        # -- first gather decks in a list
-        self.items_list: List[QListWidgetItem] = []
-        for item_i in range(self.count()):
-            self.items_list.append(self.item(item_i))
-
-        # -- check if any new deck is in the DB. If exists, keep it in the
-        #    decks list (will be added later)
-        for deck in self.items_list:
-            if deck.text() in decks_list:
-                decks_list.remove(deck.text())
-
-        # -- add new decks to the list of QListWidgetItems
-        for deck_name in decks_list:
-            new_item = QListWidgetItem(deck_name)
-            self.items_list.append(new_item)
-            self.addItem(new_item)
-
-        self.sortItems()
-        # print(self.items_list)
+        # add decks to self
+        self.addItems(decks_in_db)

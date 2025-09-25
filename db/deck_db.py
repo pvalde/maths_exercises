@@ -27,7 +27,6 @@ class DeckDB:
         else:
             return True
 
-
     @staticmethod
     def add_deck(deck_name: str) -> None:
         """
@@ -37,18 +36,14 @@ class DeckDB:
         try:
             with sqlite3.connect(ProgramPaths.get_user_db_path()) as conn:
                 cur = conn.cursor()
+                cur.execute(
+                    "INSERT INTO decks (deck_name) VALUES (?)", (deck_name,)
+                )
+                conn.commit()
         except sqlite3.OperationalError as e:
             raise Exception("Failed to open database:", e)
-
-        try:
-            cur.execute(
-                "INSERT INTO decks (deck_name) VALUES (?)", (deck_name,)
-            )
-
         except sqlite3.Error as e:
             raise Exception(f"Error adding new deck to DB: {e}.")
-
-        conn.commit()
 
     @staticmethod
     def get_decks_all() -> List[str]:
@@ -56,18 +51,33 @@ class DeckDB:
         try:
             with sqlite3.connect(ProgramPaths.get_user_db_path()) as conn:
                 cur = conn.cursor()
+
+                cur.execute("SELECT deck_name FROM decks")
+
+                decks: List[Tuple[str]] = cur.fetchall()
+
+                decks_list: List[str] = []
+
+                for tuple in decks:
+                    decks_list.append(tuple[0])
+
+                return decks_list
+
         except sqlite3.OperationalError as e:
             raise Exception("Failed to open database:", e)
+
+    @staticmethod
+    def remove_deck(deck_name: str):
+        # connect to user's database
+        try:
+            with sqlite3.connect(ProgramPaths.get_user_db_path()) as conn:
+                cursor = conn.cursor()
+                cursor.execute("PRAGMA foreign_keys = on;")
+                cursor.execute(
+                    "DELETE FROM decks WHERE deck_name = ?", (deck_name,)
+                )
         
-        cur.execute(
-            "SELECT deck_name FROM decks"
-        )
-
-        decks: List[Tuple[str]] = cur.fetchall()
-
-        decks_list: List[str] = []
-
-        for tuple in decks:
-            decks_list.append(tuple[0])
-
-        return decks_list
+        except sqlite3.IntegrityError as e:
+            raise Exception(f"Error: the deck '{deck_name}' is not empty.\n{e}")
+        except sqlite3.Error as e:
+            raise Exception("Database Error:", e)

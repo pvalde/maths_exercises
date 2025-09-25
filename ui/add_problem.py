@@ -9,15 +9,14 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QFontMetrics, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from typing import List
-from ui.ui_utils import NoInternetProfile
+from ui.ui_utils import NoInternetProfile, update_decks_from_db
+from db.deck_db import DeckDB
 
 # CONSTANTS
 from utils.constants import PROGRAM_NAME
 from utils.constants import MAIN_DIR
 from utils.constants import USER_MEDIA_QURL
 from utils.constants import MATHJAX3_PATH
-from .ui_utils import decks_mem
 
 
 class AddProblemWindow(QWidget):
@@ -83,6 +82,22 @@ class AddProblemWindow(QWidget):
 
         self.setLayout(layout)
 
+    # def closeEvent(self, event: QCloseEvent) -> None:
+    #     if self.front_edit.toPlainText() == "" and self.back_edit.toPlainText() == "":
+    #         reply = QMessageBox.question(self, "Confirmation",
+    #                                      "Are you sure you want to close the window without saving?",
+    #                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No) # type: ignore
+    #     
+    #         if reply == QMessageBox.Yes: # type: ignore
+    #             self.destroy(True, True)
+
+    #             event.accept()
+    #             super().closeEvent(event)
+    #             print("reached the end")
+    #         
+    #         else:
+    #             event.ignore()
+
     def update_preview(self) -> None:
         """
         Updates html preview with contents of self.front_edit and self.back_edit
@@ -121,49 +136,27 @@ class AddProblemWindow(QWidget):
 class DeckSelector(QComboBox):
     def __init__(self):
         super().__init__()
-        self.list_of_decks: List[str] = []
+
+        # deck key-value pair in ui.ui_utils.update_decks_from_db
+        if 'DeckSelector' not in update_decks_from_db:
+            update_decks_from_db["DeckSelector"] = True;
+
         self.update_list_of_decks()
 
     def update_list_of_decks(self):
         """
-        Checks the current list of decks in memory and updates the DeckSelector 
-        list of decks according to that.
+        Checks if the decks table in the db has been modified. If true, update
+        the DeckSelector's list of decks according to that.
         """
+        if update_decks_from_db["DeckSelector"]:
+            # delete the current list in DeckSelector class
+            n_of_items = self.count()
+            for i in range (n_of_items):
+                self.removeItem(n_of_items-1 - i)
 
-        # delete the current list
-        n_of_items = self.count()
-        for i in range (n_of_items):
-            self.removeItem(n_of_items-1 - i)
-
-        self.addItems(decks_mem.decks)
-
-        # combobox_items: List[Tuple[str, int]] = []
-        # for i in range(self.count()):
-        #     combobox_items.append((self.itemText(i), i))
-
-        # if len(decks_mem.decks) == len(self.list_of_decks):
-        #     return
-        
-        # if len(decks_mem.decks) > len(self.list_of_decks):
-
-        #     for deck in decks_mem.decks:
-        #         if deck not in self.list_of_decks:
-        #             self.list_of_decks.append(deck)
-        #             self.addItem(deck)
-
-        # else:
-        #     # remove from list nonexistent decks in db
-        #     combobox_items: List[Tuple[str, int]] = []
-        #     for i in range(self.count()):
-        #         combobox_items.append((self.itemText(i), i))
-
-        #     for i in range(len(combobox_items)):
-        #         if combobox_items[i][0] not in decks_mem.decks:
-        #             self.removeItem(i)
-        #     # for deck in self.list_of_decks:
-        #     #     if deck not in decks_mem.decks:
-        #     #         self.removeItem(self)
-
+            print("DeckSelector retrieving list of decks from DB.")
+            self.addItems(sorted(DeckDB.get_decks_all()))
+            update_decks_from_db["DeckSelector"] = False
 
     def mousePressEvent(self, event: QMouseEvent):
         """
