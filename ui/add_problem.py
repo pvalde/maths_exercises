@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import (
+    QPushButton,
     QWidget,
     QLabel,
     QVBoxLayout,
@@ -9,8 +10,12 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QFontMetrics, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from ui.ui_utils import NoInternetProfile, update_decks_from_db
+from ui.ui_utils import (
+    NoInternetProfile,
+    update_decks_from_db,
+)
 from db.deck_db import DeckDB
+from db.problem_db import ProblemDB
 
 # CONSTANTS
 from utils.constants import PROGRAM_NAME
@@ -25,6 +30,7 @@ class AddProblemWindow(QWidget):
     """
 
     def __init__(self):
+        """ """
         super().__init__()
         self.setWindowTitle(f"{PROGRAM_NAME} - Add New")
         layout = QVBoxLayout()
@@ -62,6 +68,10 @@ class AddProblemWindow(QWidget):
         self.front_edit.textChanged.connect(self.update_preview)
         self.back_edit.textChanged.connect(self.update_preview)
 
+        # add deck button
+        self.button = QPushButton("Add Problem")
+        self.button.clicked.connect(self.add_problem)
+
         # setting layout
 
         # -- deck selector ----------------
@@ -80,23 +90,9 @@ class AddProblemWindow(QWidget):
         layout.addWidget(self.html_label)
         layout.addWidget(self.html_viewer)
 
+        layout.addWidget(self.button)
+
         self.setLayout(layout)
-
-    # def closeEvent(self, event: QCloseEvent) -> None:
-    #     if self.front_edit.toPlainText() == "" and self.back_edit.toPlainText() == "":
-    #         reply = QMessageBox.question(self, "Confirmation",
-    #                                      "Are you sure you want to close the window without saving?",
-    #                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No) # type: ignore
-    #     
-    #         if reply == QMessageBox.Yes: # type: ignore
-    #             self.destroy(True, True)
-
-    #             event.accept()
-    #             super().closeEvent(event)
-    #             print("reached the end")
-    #         
-    #         else:
-    #             event.ignore()
 
     def update_preview(self) -> None:
         """
@@ -123,7 +119,7 @@ class AddProblemWindow(QWidget):
         html_content: str = (
             f"<!DOCTYPE html>\n<html>\n{html_header}\n"
             f"<body>\n{self.front_edit.toPlainText()}\n"
-            + f"<hr>\n"
+            + "<hr>\n"
             + f"{self.back_edit.toPlainText()}\n</body>\n</html>"
         )
 
@@ -132,14 +128,26 @@ class AddProblemWindow(QWidget):
         self.html_viewer.setHtml(html_content, baseUrl=USER_MEDIA_QURL)
         self.html_viewer.update()
 
+    def add_problem(self) -> None:
+        content = {
+            "question": self.front_edit.toPlainText(),
+            "answer": self.back_edit.toPlainText(),
+        }
+
+        ProblemDB.add_deck(
+            content=content, deck=self.deckSelector.currentText()
+        )
+        print(f"new problem added to '{self.deckSelector.currentText()}'!!!")
+        self.close()
+
 
 class DeckSelector(QComboBox):
     def __init__(self):
         super().__init__()
 
         # deck key-value pair in ui.ui_utils.update_decks_from_db
-        if 'DeckSelector' not in update_decks_from_db:
-            update_decks_from_db["DeckSelector"] = True;
+        if "DeckSelector" not in update_decks_from_db:
+            update_decks_from_db["DeckSelector"] = True
 
         self.update_list_of_decks()
 
@@ -151,8 +159,8 @@ class DeckSelector(QComboBox):
         if update_decks_from_db["DeckSelector"]:
             # delete the current list in DeckSelector class
             n_of_items = self.count()
-            for i in range (n_of_items):
-                self.removeItem(n_of_items-1 - i)
+            for i in range(n_of_items):
+                self.removeItem(n_of_items - 1 - i)
 
             print("DeckSelector retrieving list of decks from DB.")
             self.addItems(sorted(DeckDB.get_decks_all()))
@@ -163,9 +171,7 @@ class DeckSelector(QComboBox):
         Overrides default implementation to detect clicks. It runs
         self.add_decks()
         """
-        if event.button() == Qt.LeftButton: # type: ignore 
+        if event.button() == Qt.LeftButton:  # type: ignore
             self.update_list_of_decks()
 
-
-        super().mousePressEvent(event) # calls the default behavior
-    
+        super().mousePressEvent(event)  # calls the default behavior

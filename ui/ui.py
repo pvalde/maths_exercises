@@ -40,12 +40,11 @@ class MainWindow(QMainWindow):
 
         # decks_container
         self.decks_container_label = QLabel("<h1>Decks</h1>")
-        self.decks_container_label.setTextFormat(Qt.RichText) # type: ignore
+        self.decks_container_label.setTextFormat(Qt.RichText)  # type: ignore
 
         self.decks_container = DeckListWidget()
         self.decks_items: List[QListWidgetItem] = []
         self.show_decks()
-
 
         # add deck button
         self.add_new_deck_button = QPushButton("Add new deck")
@@ -62,7 +61,7 @@ class MainWindow(QMainWindow):
         self.add_buttons_container.addWidget(self.add_new_deck_button)
         self.add_buttons_container.addWidget(self.add_new_problem_button)
         self.main_container.addLayout(self.add_buttons_container)
-        self.main_container.addWidget(self.decks_container_label, alignment=Qt.AlignCenter) # type: ignore
+        self.main_container.addWidget(self.decks_container_label, alignment=Qt.AlignCenter)  # type: ignore
         self.main_container.addWidget(self.decks_container)
 
         # Menu
