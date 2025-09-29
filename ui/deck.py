@@ -140,10 +140,10 @@ class DeckListWidget(QListWidget, DeckUpdEmitter, DeckUpdReciever):
             QMessageBox.critical(self, "Error", f"{e}")
             return
         print("deleting deck: ", deck_to_delete.text())
-        self.update_list_of_decks()
+        self._update_list_of_decks()
         self.decks_updated_emitter()
 
-    def update_list_of_decks(self) -> None:
+    def _update_list_of_decks(self) -> None:
         """
         Updates the current list of decks according to DB.
         """
@@ -163,7 +163,7 @@ class DeckListWidget(QListWidget, DeckUpdEmitter, DeckUpdReciever):
 
     @override
     def decks_updated_reciever(self) -> None:
-        self.update_list_of_decks()
+        self._update_list_of_decks()
 
     @override
     def decks_updated_emitter(self) -> None:
