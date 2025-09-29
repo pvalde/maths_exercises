@@ -1,43 +1,50 @@
+import re
+from typing import override
+
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtGui import QCloseEvent, QFont, QFontMetrics, QMouseEvent
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (
-    QPushButton,
-    QWidget,
-    QLabel,
-    QVBoxLayout,
-    QPlainTextEdit,
     QComboBox,
+    QLabel,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
 )
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QFont, QFontMetrics, QMouseEvent
-from PySide6.QtWebEngineWidgets import QWebEngineView
-from ui.ui_utils import (
-    NoInternetProfile,
-    update_decks_from_db,
-)
 from db.deck_db import DeckDB
 from db.problem_db import ProblemDB
+from ui.ui_utils import NoInternetProfile, DeckUpdReciever
 
 # CONSTANTS
-from utils.constants import PROGRAM_NAME
-from utils.constants import MAIN_DIR
-from utils.constants import USER_MEDIA_QURL
-from utils.constants import MATHJAX3_PATH
+from utils.constants import (
+    MAIN_DIR,
+    MATHJAX3_PATH,
+    PROGRAM_NAME,
+    USER_MEDIA_QURL,
+)
 
 
-class AddProblemWindow(QWidget):
+class AddProblemWindow(QWidget, DeckUpdReciever):
     """
     Window for adding new 'exercises' to the database.
     """
+
+    closed = Signal(bool)
+    problem_added = Signal(bool)
 
     def __init__(self):
         """ """
         super().__init__()
         self.setWindowTitle(f"{PROGRAM_NAME} - Add New")
+
         layout = QVBoxLayout()
 
         # Deck selection --------------------------------
         self.deckSelectorTitle = QLabel("Deck")
-        self.deckSelector = DeckSelector()
+        self.deck_selector = DeckSelector()
 
         # Front Text ------------------------------------
         self.front_label = QLabel("Problem")
@@ -76,7 +83,7 @@ class AddProblemWindow(QWidget):
 
         # -- deck selector ----------------
         layout.addWidget(self.deckSelectorTitle)
-        layout.addWidget(self.deckSelector)
+        layout.addWidget(self.deck_selector)
 
         # -- front ------------------------
         layout.addWidget(self.front_label)
@@ -124,7 +131,6 @@ class AddProblemWindow(QWidget):
         )
 
         # print(html_content)
-
         self.html_viewer.setHtml(html_content, baseUrl=USER_MEDIA_QURL)
         self.html_viewer.update()
 
@@ -135,19 +141,58 @@ class AddProblemWindow(QWidget):
         }
 
         ProblemDB.add_deck(
-            content=content, deck=self.deckSelector.currentText()
+            content=content, deck=self.deck_selector.currentText()
         )
-        print(f"new problem added to '{self.deckSelector.currentText()}'!!!")
+        print(f"new problem added to '{self.deck_selector.currentText()}'!!!")
+        self.problem_added.emit(True)
+        self.closed.emit(True)
         self.close()
 
+    def closeEvent(self, event: QCloseEvent, /) -> None:
+        print(f"front: '{self.front_edit.toPlainText()}'")
+        print(f"back: '{self.back_edit.toPlainText()}'")
+        if not (
+            re.fullmatch(r"\s*", self.front_edit.toPlainText())
+            and re.fullmatch(r"\s*", self.back_edit.toPlainText())
+        ):
+            reply = QMessageBox.question(
+                self,
+                "Confirmation",
+                "Discard current input?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
 
-class DeckSelector(QComboBox):
+            if reply == QMessageBox.StandardButton.Yes:
+                self.html_view_cleanup()
+                self.closed.emit(True)
+                event.accept()
+
+            else:
+                event.ignore()
+
+        else:
+            self.closed.emit(True)
+            self.html_view_cleanup()
+
+    def html_view_cleanup(self):
+        self.html_viewer.stop()
+        # self.html_viewer.loadFinished.disconnect() # not necessary
+        page = self.html_viewer.page()
+        if page:
+            page.deleteLater()
+        QTimer.singleShot(
+            0, lambda: self.html_viewer.deleteLater()
+        )  # give some time to delete the WebEnginePage Object before the QWebEngineView One
+
+    @override
+    def decks_updated_reciever(self):
+        self.deck_selector.decks_updated_reciever()
+
+
+class DeckSelector(QComboBox, DeckUpdReciever):
     def __init__(self):
         super().__init__()
-
-        # deck key-value pair in ui.ui_utils.update_decks_from_db
-        if "DeckSelector" not in update_decks_from_db:
-            update_decks_from_db["DeckSelector"] = True
 
         self.update_list_of_decks()
 
@@ -156,15 +201,13 @@ class DeckSelector(QComboBox):
         Checks if the decks table in the db has been modified. If true, update
         the DeckSelector's list of decks according to that.
         """
-        if update_decks_from_db["DeckSelector"]:
-            # delete the current list in DeckSelector class
-            n_of_items = self.count()
-            for i in range(n_of_items):
-                self.removeItem(n_of_items - 1 - i)
+        # delete the current list in DeckSelector class
+        n_of_items = self.count()
+        for i in range(n_of_items):
+            self.removeItem(n_of_items - 1 - i)
 
-            print("DeckSelector retrieving list of decks from DB.")
-            self.addItems(sorted(DeckDB.get_decks_all()))
-            update_decks_from_db["DeckSelector"] = False
+        print("DeckSelector retrieving list of decks from DB.")
+        self.addItems(sorted(DeckDB.get_decks_all()))
 
     def mousePressEvent(self, event: QMouseEvent):
         """
@@ -175,3 +218,7 @@ class DeckSelector(QComboBox):
             self.update_list_of_decks()
 
         super().mousePressEvent(event)  # calls the default behavior
+
+    @override
+    def decks_updated_reciever(self):
+        self.update_list_of_decks()

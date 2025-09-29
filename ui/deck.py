@@ -1,3 +1,5 @@
+from typing import override
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -16,21 +18,23 @@ from PySide6.QtGui import (
     QShortcut,
     QKeySequence,
     QAction,
+    QCloseEvent,
 )
 from utils.constants import PROGRAM_NAME
 from db.deck_db import DeckDB
-from typing import Callable
-from ui.ui_utils import update_decks_from_db
+from ui.ui_utils import DeckUpdEmitter, DeckUpdReciever
 
 
-class AddDeckPopup(QWidget):
+class AddDeckPopup(QWidget, DeckUpdEmitter):
     """
     QWidget that works as a popup that prompts the user to add a new deck.
     """
 
-    def __init__(self, show_function: Callable[[], None]):
+    closed = Signal(bool)
+    decks_updated = Signal(bool)
+
+    def __init__(self):
         super().__init__()
-        self.parent_show_function = show_function
         self.setWindowTitle(f"{PROGRAM_NAME} - Add Deck")
 
         self.main_layout = QVBoxLayout()
@@ -60,7 +64,7 @@ class AddDeckPopup(QWidget):
             self.deck_name_error = QMessageBox.critical(
                 self,
                 "Error",
-                f"Please provide a name for the deck.",
+                "Please provide a name for the deck.",
             )
 
         elif not DeckDB.deck_exists(deck_final_name):
@@ -84,24 +88,29 @@ class AddDeckPopup(QWidget):
                     f"The deck '{deck_final_name}' has been added to the DB.",
                 )
 
-            self.parent_show_function()
-
-            # turn update deck lists flags on
-            for key in update_decks_from_db.keys():
-                update_decks_from_db[f"{key}"] = True
-
-            self.destroy(True, True)
+            self.decks_updated_emitter()
+            self.closed.emit(True)
+            self.close()
 
         else:
-
             self.deck_name_error = QMessageBox.critical(
                 self,
                 "Error",
                 f"A deck with name '{deck_final_name}' already exists.",
             )
 
+    def closeEvent(self, event: QCloseEvent, /) -> None:
+        self.closed.emit(True)
+        return super().closeEvent(event)
 
-class DeckListWidget(QListWidget):
+    @override
+    def decks_updated_emitter(self) -> None:
+        self.decks_updated.emit(True)
+
+
+class DeckListWidget(QListWidget, DeckUpdEmitter, DeckUpdReciever):
+    decks_updated = Signal(bool)
+
     def __init__(self):
         super().__init__()
 
@@ -123,7 +132,7 @@ class DeckListWidget(QListWidget):
 
     def delete_deck(self, deck_to_delete: QListWidgetItem) -> None:
         """
-        Deletes the current deck from the DB.
+        Deletes the current deck from the self consulting the DB.
         """
         try:
             DeckDB.remove_deck(deck_to_delete.text())
@@ -131,11 +140,12 @@ class DeckListWidget(QListWidget):
             QMessageBox.critical(self, "Error", f"{e}")
             return
         print("deleting deck: ", deck_to_delete.text())
-        self.update_list_of_decks_from_db()
+        self.update_list_of_decks()
+        self.decks_updated_emitter()
 
-    def update_list_of_decks_from_db(self) -> None:
+    def update_list_of_decks(self) -> None:
         """
-        Updates the current list of decks on the GUI according to DB.
+        Updates the current list of decks according to DB.
         """
 
         print("DeckListWidget retrieving list of decks from DB")
@@ -150,3 +160,11 @@ class DeckListWidget(QListWidget):
 
         # add decks to self
         self.addItems(decks_in_db)
+
+    @override
+    def decks_updated_reciever(self) -> None:
+        self.update_list_of_decks()
+
+    @override
+    def decks_updated_emitter(self) -> None:
+        self.decks_updated.emit(True)

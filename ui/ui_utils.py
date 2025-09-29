@@ -1,9 +1,12 @@
-from typing import Dict
 from PySide6.QtWebEngineCore import (
     QWebEngineProfile,
     QWebEngineUrlRequestInfo,
     QWebEngineUrlRequestInterceptor,
 )
+
+from PySide6.QtCore import QObject
+
+from abc import ABC, ABCMeta, abstractmethod
 
 
 class NoInternetProfile(QWebEngineProfile):
@@ -35,4 +38,23 @@ class NoInternetProfile(QWebEngineProfile):
                 info.block(True)
 
 
-update_decks_from_db: Dict[str, bool] = {}
+# class _ABQObjectMeta(type(QObject), ABCMeta):
+#     pass
+
+
+class QABCMeta(ABCMeta, type(QObject)):
+    """A metaclass that can be used for abstract QObject-derived classes."""
+
+    pass
+
+
+class DeckUpdReciever(ABC, metaclass=QABCMeta):
+    @abstractmethod
+    def decks_updated_reciever(self) -> None:
+        pass
+
+
+class DeckUpdEmitter(ABC, metaclass=QABCMeta):
+    @abstractmethod
+    def decks_updated_emitter(self) -> None:
+        pass
