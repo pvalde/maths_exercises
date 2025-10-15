@@ -139,7 +139,6 @@ class DeckListWidget(QListWidget, DeckUpdEmitter, DeckUpdReciever):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"{e}")
             return
-        print("deleting deck: ", deck_to_delete.text())
         self._update_list_of_decks()
         self.decks_updated_emitter()
 
@@ -147,8 +146,6 @@ class DeckListWidget(QListWidget, DeckUpdEmitter, DeckUpdReciever):
         """
         Updates the current list of decks according to DB.
         """
-
-        print("DeckListWidget retrieving list of decks from DB")
 
         # remove all items from the current list
         n_of_decks_in_mem = self.count()

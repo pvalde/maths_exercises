@@ -54,7 +54,6 @@ class MainWindow(QMainWindow, DeckUpdEmitter):
 
         # adding containers in main_sub_container to main_container object
         for container in self.main_sub_containers:
-            print(container)
             if isinstance(container, QLayout):
                 self.main_container.addLayout(container)
             elif isinstance(container, QWidget):
@@ -90,9 +89,6 @@ class MainWindow(QMainWindow, DeckUpdEmitter):
         return (decks_container_label, deck_list_widget)
 
     def closeEvent(self, event: QCloseEvent):
-        # debugging
-        for key, value in self.child_window.items():
-            print(f"'{key}': {value}")
 
         if any(value is not None for value in self.child_window.values()):
             reply = QMessageBox.question(

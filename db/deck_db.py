@@ -15,17 +15,18 @@ class DeckDB:
         try:
             with sqlite3.connect(ProgramPaths.get_user_db_path()) as conn:
                 cur = conn.cursor()
+
+            cur.execute(
+                "SELECT deck_name FROM decks WHERE deck_name = ?", (deck_name,)
+            )
+
+            if len(cur.fetchall()) == 0:
+                return False
+            else:
+                return True
+
         except sqlite3.OperationalError as e:
             raise Exception("Failed to open database:", e)
-
-        cur.execute(
-            "SELECT deck_name FROM decks WHERE deck_name = ?", (deck_name,)
-        )
-
-        if len(cur.fetchall()) == 0:
-            return False
-        else:
-            return True
 
     @staticmethod
     def add_deck(deck_name: str) -> None:
@@ -76,8 +77,11 @@ class DeckDB:
                 cursor.execute(
                     "DELETE FROM decks WHERE deck_name = ?", (deck_name,)
                 )
-        
+
         except sqlite3.IntegrityError as e:
-            raise Exception(f"Error: the deck '{deck_name}' is not empty.\n{e}")
+            raise Exception(
+                f"Error: the deck '{deck_name}' is not empty.\n{e}"
+            )
         except sqlite3.Error as e:
             raise Exception("Database Error:", e)
+

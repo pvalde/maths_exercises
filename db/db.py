@@ -30,7 +30,7 @@ def check_or_create_user_db() -> None:
                     problem_feedback           INTEGER,
                     problem_src                TEXT,
                     problem_deck               INTEGER,
-                    problem_content            TEXT UNIQUE,
+                    problem_content            TEXT UNIQUE NOT NULL,
                     FOREIGN KEY (problem_deck) REFERENCES decks(deck_id) ON DELETE RESTRICT ON UPDATE CASCADE 
                     ); 
         """
@@ -39,7 +39,7 @@ def check_or_create_user_db() -> None:
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS decks(
                     deck_id                 INTEGER PRIMARY KEY,
-                    deck_name               TEXT UNIQUE
+                    deck_name               TEXT UNIQUE NOT NULL
                     ); 
         """
         )
@@ -47,15 +47,15 @@ def check_or_create_user_db() -> None:
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS tags(
                         tag_id                 INTEGER PRIMARY KEY,
-                        tag_name               TEXT UNIQUE
-                        ); 
+                        tag_name               TEXT UNIQUE NOT NULL
+                        );
             """
         )
 
         cursor.execute(
             """CREATE TABLE IF NOT EXISTS problems_tags(
-                    problem_id              INTEGER,
-                    tag_id                  INTEGER,
+                    problem_id              INTEGER NOT NULL,
+                    tag_id                  INTEGER NOT NULL,
                     FOREIGN KEY (problem_id) REFERENCES problems(problem_id),
                     FOREIGN KEY (tag_id)    REFERENCES tags(tag_id)
                     );

@@ -1,15 +1,20 @@
 import re
-from typing import override
+from typing import override, List
 
 from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QCloseEvent, QFont, QFontMetrics, QMouseEvent
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import (
     QComboBox,
+    QHBoxLayout,
     QLabel,
+    QLayout,
+    QLayoutItem,
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    # QTextEdit,
+    QLineEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -25,6 +30,113 @@ from utils.constants import (
     PROGRAM_NAME,
     USER_MEDIA_QURL,
 )
+
+
+class TagSelectorWidget(QWidget):
+    """
+    Interactive tags selector.
+    """
+
+    def __init__(self):
+        self.n_of_items: int = 0
+
+        super().__init__()
+        layout = QVBoxLayout()
+        self.setLayout(layout)
+
+        # Label
+        self.label = QLabel("Tags")
+        layout.addWidget(self.label)
+
+        # tags container
+        self.tags_container = QWidget()
+        self.tags_container_layout = QVBoxLayout()
+        self.tags_container.setLayout(self.tags_container_layout)
+
+        # new tag button
+        self.add_new_tag_button = QPushButton("+")
+        self.add_new_tag_button.setMaximumWidth(25)
+        self.add_new_tag_button.clicked.connect(
+            lambda: self._add_new_tag(self.tags_container_layout)
+        )
+        layout.addWidget(self.tags_container)
+        layout.addWidget(
+            self.add_new_tag_button, alignment=Qt.AlignmentFlag.AlignHCenter
+        )
+        # self.remove_tag_button = QPushButton("-")
+
+    def _add_new_tag(self, tags_container_layout: QLayout) -> None:
+        """
+        Adds a new QLayoutItem object to tags_container_layout. The first
+        contains a QWidget object with QHBoxLayout that contains QLineEdit
+        and QPushButton objects.
+        """
+        # create new tag entry
+        widget = QWidget()
+        layout = QHBoxLayout()
+        widget.setLayout(layout)
+        text_input = QLineEdit()
+        text_input.setMaximumHeight(25)
+        remove_button = QPushButton("-")
+        remove_button.setMaximumWidth(25)
+        remove_button.clicked.connect(
+            lambda: self._remove_tag(tags_container_layout, widget)
+        )
+
+        layout.addWidget(text_input)
+        layout.addWidget(remove_button)
+
+        tags_container_layout.addWidget(widget)
+
+    def _remove_tag(
+        self, tags_container_layout: QLayout, tag_widget: QWidget
+    ) -> None:
+        """
+        Removes tag_widget from tags_container_layout by removing the
+        QLayoutItem object that contains the tag_widget.
+        """
+        if tags_container_layout is not None:
+            for i in range(tags_container_layout.count()):
+                q_layout_item: QLayoutItem | None = (
+                    tags_container_layout.itemAt(i)
+                )
+                if q_layout_item is not None:
+                    if q_layout_item.widget() == tag_widget:
+                        tags_container_layout.removeItem(q_layout_item)
+
+    def remove_all_tags(self):
+        for i in range(self.tags_container_layout.count() - 1, -1, -1):
+            q_layout_item: QLayoutItem | None = (
+                self.tags_container_layout.itemAt(i)
+            )
+            if q_layout_item is None:
+                pass
+            else:
+                self.tags_container_layout.removeItem(q_layout_item)
+
+    def tags(self) -> List[str]:
+        """
+        Returns a list of strings containing all the tags added. If a tag is
+        whitespace only, it is ignored. If no tags has been added, an empty
+        list is returned.
+        """
+        tags: List[str] = []
+        count = range(
+            self.tags_container_layout.count() - 1,
+        )
+        for i in count:
+            q_layout_item: QLayoutItem | None = (
+                self.tags_container_layout.itemAt(i)
+            )
+            if q_layout_item is not None:
+                q_line_edit_obj = q_layout_item.widget().children()[1]
+                assert q_line_edit_obj is not None
+                if isinstance(q_line_edit_obj, QLineEdit):
+                    tag = q_line_edit_obj.text().strip()
+                    if tag.isspace() is not True and len(tag) > 0:
+                        tags.append(tag)
+
+        return tags
 
 
 class AddProblemWindow(QWidget, DeckUpdReciever):
@@ -79,6 +191,9 @@ class AddProblemWindow(QWidget, DeckUpdReciever):
         self.button = QPushButton("Add Problem")
         self.button.clicked.connect(self.add_problem)
 
+        # tags selector
+        self.tags_selector = TagSelectorWidget()
+
         # setting layout
 
         # -- deck selector ----------------
@@ -96,6 +211,9 @@ class AddProblemWindow(QWidget, DeckUpdReciever):
         # -- preview ----------------------
         layout.addWidget(self.html_label)
         layout.addWidget(self.html_viewer)
+
+        # -- tags selector ----------------
+        layout.addWidget(self.tags_selector)
 
         layout.addWidget(self.button)
 
@@ -130,7 +248,6 @@ class AddProblemWindow(QWidget, DeckUpdReciever):
             + f"{self.back_edit.toPlainText()}\n</body>\n</html>"
         )
 
-        # print(html_content)
         self.html_viewer.setHtml(html_content, baseUrl=USER_MEDIA_QURL)
         self.html_viewer.update()
 
@@ -139,18 +256,35 @@ class AddProblemWindow(QWidget, DeckUpdReciever):
             "question": self.front_edit.toPlainText(),
             "answer": self.back_edit.toPlainText(),
         }
+        tags = self.tags_selector.tags()
+        if len(tags) > 0:
+            ProblemDB.add_deck(
+                content=content,
+                deck=self.deck_selector.currentText(),
+                tags=tags,
+            )
 
-        ProblemDB.add_deck(
-            content=content, deck=self.deck_selector.currentText()
-        )
-        print(f"new problem added to '{self.deck_selector.currentText()}'!!!")
+        else:
+            ProblemDB.add_deck(
+                content=content, deck=self.deck_selector.currentText()
+            )
+
         self.problem_added.emit(True)
-        self.closed.emit(True)
-        self.close()
+        # clean all data:
+        self.front_edit.clear()
+        self.back_edit.clear()
+        # self.tags_selector.remove_all_tags()
+        # the previous one has been commented out because is better to keep tags for a question
+        # of adding problems to the db.
+
+        # send message to user
+        QMessageBox.information(
+            None, "Success", "The Problem has been succesfully added."
+        )
+        # self.closed.emit(True)
+        # self.close()
 
     def closeEvent(self, event: QCloseEvent, /) -> None:
-        print(f"front: '{self.front_edit.toPlainText()}'")
-        print(f"back: '{self.back_edit.toPlainText()}'")
         if not (
             re.fullmatch(r"\s*", self.front_edit.toPlainText())
             and re.fullmatch(r"\s*", self.back_edit.toPlainText())
@@ -206,7 +340,6 @@ class DeckSelector(QComboBox, DeckUpdReciever):
         for i in range(n_of_items):
             self.removeItem(n_of_items - 1 - i)
 
-        print("DeckSelector retrieving list of decks from DB.")
         self.addItems(sorted(DeckDB.get_decks_all()))
 
     def mousePressEvent(self, event: QMouseEvent):
