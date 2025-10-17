@@ -31,6 +31,7 @@ def check_or_create_user_db() -> None:
                     problem_src                TEXT,
                     problem_deck               INTEGER,
                     problem_content            TEXT UNIQUE NOT NULL,
+                    problem_creation_date      TEXT,
                     FOREIGN KEY (problem_deck) REFERENCES decks(deck_id) ON DELETE RESTRICT ON UPDATE CASCADE 
                     ); 
         """

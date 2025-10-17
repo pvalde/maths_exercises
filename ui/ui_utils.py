@@ -58,3 +58,15 @@ class DeckUpdEmitter(ABC, metaclass=QABCMeta):
     @abstractmethod
     def decks_updated_emitter(self) -> None:
         pass
+
+
+class ProblemsUpdEmitter(ABC, metaclass=QABCMeta):
+    @abstractmethod
+    def problems_updated_emitter(self) -> None:
+        pass
+
+
+class ProblemsUpdReciever(ABC, metaclass=QABCMeta):
+    @abstractmethod
+    def problems_updated_reciever(self) -> None:
+        pass

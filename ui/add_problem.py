@@ -21,7 +21,7 @@ from PySide6.QtWidgets import (
 
 from db.deck_db import DeckDB
 from db.problem_db import ProblemDB
-from ui.ui_utils import NoInternetProfile, DeckUpdReciever
+from ui.ui_utils import NoInternetProfile, DeckUpdReciever, ProblemsUpdEmitter
 
 # CONSTANTS
 from utils.constants import (
@@ -139,7 +139,7 @@ class TagSelectorWidget(QWidget):
         return tags
 
 
-class AddProblemWindow(QWidget, DeckUpdReciever):
+class AddProblemWindow(QWidget, DeckUpdReciever, ProblemsUpdEmitter):
     """
     Window for adding new 'exercises' to the database.
     """
@@ -258,14 +258,14 @@ class AddProblemWindow(QWidget, DeckUpdReciever):
         }
         tags = self.tags_selector.tags()
         if len(tags) > 0:
-            ProblemDB.add_deck(
+            ProblemDB.add_problem(
                 content=content,
                 deck=self.deck_selector.currentText(),
                 tags=tags,
             )
 
         else:
-            ProblemDB.add_deck(
+            ProblemDB.add_problem(
                 content=content, deck=self.deck_selector.currentText()
             )
 
@@ -322,6 +322,10 @@ class AddProblemWindow(QWidget, DeckUpdReciever):
     @override
     def decks_updated_reciever(self):
         self.deck_selector.decks_updated_reciever()
+
+    @override
+    def problems_updated_emitter(self):
+        self.problem_added.emit(True)
 
 
 class DeckSelector(QComboBox, DeckUpdReciever):

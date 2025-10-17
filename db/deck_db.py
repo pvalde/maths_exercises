@@ -85,3 +85,20 @@ class DeckDB:
         except sqlite3.Error as e:
             raise Exception("Database Error:", e)
 
+    @staticmethod
+    def get_deck_by_id(id: int):
+        try:
+            with sqlite3.connect(
+                ProgramPaths.get_user_db_path()
+            ) as connection:
+                cursor = connection.cursor()
+                cursor.execute("PRAGMA foreign_keys = on;")
+                cursor.execute(
+                    "SELECT deck_name FROM decks WHERE deck_id = ?",
+                    (id,),
+                )
+
+            return cursor.fetchone()[0]
+
+        except sqlite3.Error as e:
+            raise Exception("Database Error:", e)

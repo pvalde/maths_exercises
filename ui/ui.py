@@ -15,15 +15,23 @@ from typing import List, Dict, override, Tuple
 
 from ui.add_problem import AddProblemWindow
 from ui.deck import AddDeckPopup, DeckListWidget
+from ui.browser import BrowserWindow
 
-from ui.ui_utils import DeckUpdEmitter, DeckUpdReciever
+from ui.ui_utils import (
+    DeckUpdEmitter,
+    DeckUpdReciever,
+    ProblemsUpdReciever,
+    ProblemsUpdEmitter,
+)
 from utils.program_paths import ProgramPaths
 from utils.constants import PROGRAM_NAME
 
 USER_DIR = ProgramPaths.get_user_dir()
 
 
-class MainWindow(QMainWindow, DeckUpdEmitter):
+class MainWindow(
+    QMainWindow, DeckUpdEmitter, ProblemsUpdReciever, ProblemsUpdEmitter
+):
     decks_updated = Signal()
 
     def __init__(self):
@@ -34,10 +42,11 @@ class MainWindow(QMainWindow, DeckUpdEmitter):
         self.file_menu = self.menu.addMenu("File")
 
         self.child_window: Dict[
-            str, AddProblemWindow | AddDeckPopup | None
+            str, AddProblemWindow | AddDeckPopup | BrowserWindow | None
         ] = {}
 
         self.decks_updated_recievers: List[DeckUpdReciever] = []
+        self.problems_updated_recievers: List[ProblemsUpdReciever] = []
 
         # create main_container
         self.main_container = QWidget()
@@ -73,8 +82,13 @@ class MainWindow(QMainWindow, DeckUpdEmitter):
         add_new_problem_button = QPushButton("Add new problem")
         add_new_problem_button.clicked.connect(self._show_add_problem_window)
 
+        # browser button
+        browser_button = QPushButton("Browser")
+        browser_button.clicked.connect(self._show_browser_window)
+
         add_buttons_container.addWidget(add_new_deck_button)
         add_buttons_container.addWidget(add_new_problem_button)
+        add_buttons_container.addWidget(browser_button)
 
         return add_buttons_container
 
@@ -108,6 +122,21 @@ class MainWindow(QMainWindow, DeckUpdEmitter):
         else:
             QApplication.quit()
 
+    def _show_browser_window(self):
+        # avoid destroying the window if it already exists
+        window = self.child_window.get("browser", None)
+        if window is None:
+            self.child_window["browser"] = BrowserWindow()
+            self.child_window["browser"].closed.connect(
+                lambda: self._set_child_window_to_none("browser")
+            )
+            self.problems_updated_recievers.append(
+                self.child_window["browser"]
+            )
+
+        if self.child_window["browser"] is not None:
+            self.child_window["browser"].show()
+
     def _show_add_problem_window(self):
         # avoid destroying the window if it already exists
         window = self.child_window.get("add_problem", None)
@@ -115,6 +144,9 @@ class MainWindow(QMainWindow, DeckUpdEmitter):
             self.child_window["add_problem"] = AddProblemWindow()
             self.child_window["add_problem"].closed.connect(
                 lambda: self._set_child_window_to_none("add_problem")
+            )
+            self.child_window["add_problem"].problem_added.connect(
+                self.problems_updated_emitter
             )
 
         # to avoid pyright error
@@ -148,6 +180,15 @@ class MainWindow(QMainWindow, DeckUpdEmitter):
         for element in self.child_window.values():
             if element is not None and isinstance(element, DeckUpdReciever):
                 element.decks_updated_reciever()
+
+    @override
+    def problems_updated_reciever(self) -> None:
+        self.problems_updated_emitter()
+
+    @override
+    def problems_updated_emitter(self) -> None:
+        for element in self.problems_updated_recievers:
+            element.problems_updated_reciever()
 
 
 def initializeGui():
