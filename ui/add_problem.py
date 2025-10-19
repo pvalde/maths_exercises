@@ -122,7 +122,7 @@ class TagSelectorWidget(QWidget):
         """
         tags: List[str] = []
         count = range(
-            self.tags_container_layout.count() - 1,
+            self.tags_container_layout.count(),
         )
         for i in count:
             q_layout_item: QLayoutItem | None = (

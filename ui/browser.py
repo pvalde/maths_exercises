@@ -1,4 +1,6 @@
 from PySide6.QtWidgets import (
+    QTreeWidget,
+    QTreeWidgetItem,
     QWidget,
     QHBoxLayout,
     QTableWidget,
@@ -8,14 +10,15 @@ from PySide6.QtCore import Signal
 from PySide6.QtGui import QCloseEvent
 import json
 from typing import Dict, override
+from db.tag_db import TagDB
 from utils.constants import PROGRAM_NAME
 from db.problem_db import ProblemDB
 from db.deck_db import DeckDB
-from ui.ui_utils import ProblemsUpdReciever
+from ui.ui_utils import DeckUpdReciever, ProblemsUpdReciever
 
 
 class BrowserWindow(
-    QWidget, ProblemsUpdReciever
+    QWidget, ProblemsUpdReciever, DeckUpdReciever
 ):  # TODO: should be problem upd reciever
     closed = Signal(bool)
 
@@ -25,8 +28,10 @@ class BrowserWindow(
         self.setLayout(self.main_layout)
         self.setWindowTitle(f"{PROGRAM_NAME} - Browser")
         self.main_subwidgets: Dict[str, QWidget] = {}
+        self.categories_selector_subwidgets: Dict[str, QWidget] = {}
 
-        self._add_categories_selector()
+        # self._add_categories_selector()
+        self._add_tree_selector()
         self._add_table_widget()
 
         self._add_subwidgets_to_main_layout()
@@ -37,11 +42,78 @@ class BrowserWindow(
         self.closed.emit(True)
         return super().closeEvent(event)
 
-    def _add_categories_selector(self) -> None:
-        """
-        Configures the categories selector for BrowserWindow.
-        """
-        pass
+    def _add_tree_selector(self) -> None:
+        qtreewidget = QTreeWidget()
+        categories_selector = self.main_subwidgets.get(
+            "categories_selector", None
+        )
+        if categories_selector is None:
+            self.main_subwidgets["categories_selector"] = qtreewidget
+            self._update_tree_selector()
+
+    def _update_tree_selector(self):
+        categories_selector = self.main_subwidgets.get(
+            "categories_selector", None
+        )
+        if categories_selector is not None and isinstance(
+            categories_selector, QTreeWidget
+        ):
+            categories_selector.clear()
+            decks_item = QTreeWidgetItem()
+            decks_item.setText(0, "decks")
+            tags_item = QTreeWidgetItem()
+            tags_item.setText(0, "tags")
+            categories_selector.insertTopLevelItem(0, decks_item)
+            categories_selector.insertTopLevelItem(1, tags_item)
+
+            list_of_decks = DeckDB.get_decks_all()
+            for deck in sorted(list_of_decks):
+                deck_item = QTreeWidgetItem()
+                deck_item.setText(0, deck)
+                decks_item.addChild(deck_item)
+
+            tags = TagDB.get_all_tags()
+            for tag in sorted(tags):
+                tag_item = QTreeWidgetItem()
+                tag_item.setText(0, tag)
+                tags_item.addChild(tag_item)
+
+    # def _add_categories_selector(self) -> None:
+    #     """
+    #     Configures the categories selector for BrowserWindow.
+    #     """
+    #     # tags selector
+    #     tags_qlistwidget = self.categories_selector_subwidgets.get(
+    #         "tagsqlistwidget", None
+    #     )
+    #     tags_list_widget = QListWidget(sortingEnabled=True)
+    #     if tags_qlistwidget is None:
+    #         self.categories_selector_subwidgets["tags_qlistwidget"] = (
+    #             tags_list_widget
+    #         )
+    #         self._update_tags_qlistwidget()
+
+    #     # decks selector
+    #     decks_qlistwidget = self.categories_selector_subwidgets.get(
+    #         "decks_qlistwidget", None
+    #     )
+    #     decks_list_widget = QListWidget(sortingEnabled=True)
+    #     if decks_qlistwidget is None:
+    #         self.categories_selector_subwidgets["decks_qlistwidget"] = (
+    #             decks_list_widget
+    #         )
+    #         self._update_decks_qlistwidget()
+
+    #     # main cateogires selector
+    #     main_widget = self.main_subwidgets.get("categories_selector", None)
+    #     qwidget = QWidget()
+    #     if main_widget is None:
+    #         self.main_subwidgets["categories_selector"] = qwidget
+
+    #     layout = QVBoxLayout()
+    #     qwidget.setLayout(layout)
+    #     layout.addWidget(tags_list_widget)
+    #     layout.addWidget(decks_list_widget)
 
     def _add_table_widget(self) -> None:
         qtablewidget = self.main_subwidgets.get("qtablewidget", None)
@@ -57,6 +129,10 @@ class BrowserWindow(
     @override
     def problems_updated_reciever(self) -> None:
         self._update_qtablewidget()
+
+    @override
+    def decks_updated_reciever(self) -> None:
+        self._update_tree_selector()
 
     def _update_qtablewidget(self):
         qtablewidget = self.main_subwidgets.get("qtablewidget", None)

@@ -30,7 +30,11 @@ USER_DIR = ProgramPaths.get_user_dir()
 
 
 class MainWindow(
-    QMainWindow, DeckUpdEmitter, ProblemsUpdReciever, ProblemsUpdEmitter
+    QMainWindow,
+    DeckUpdEmitter,
+    DeckUpdReciever,
+    ProblemsUpdReciever,
+    ProblemsUpdEmitter,
 ):
     decks_updated = Signal()
 
@@ -99,6 +103,7 @@ class MainWindow(
         deck_list_widget = DeckListWidget()
         self.decks_updated_recievers.append(deck_list_widget)
         deck_list_widget.decks_updated_reciever()
+        deck_list_widget.decks_updated.connect(self.decks_updated_reciever)
 
         return (decks_container_label, deck_list_widget)
 
@@ -162,7 +167,7 @@ class MainWindow(
             )
 
             self.child_window["deck_dialog"].decks_updated.connect(
-                self.decks_updated_emitter
+                self.decks_updated_reciever
             )
 
         # to avoid pyright error
@@ -173,10 +178,15 @@ class MainWindow(
         self.child_window[f"{window_name}"] = None
 
     @override
+    def decks_updated_reciever(self) -> None:
+        self.decks_updated_emitter()
+
+    @override
     def decks_updated_emitter(self) -> None:
         for element in self.decks_updated_recievers:
             element.decks_updated_reciever()
 
+        print(self.child_window.keys())
         for element in self.child_window.values():
             if element is not None and isinstance(element, DeckUpdReciever):
                 element.decks_updated_reciever()

@@ -1,6 +1,6 @@
 import sqlite3
 import json
-from typing import Dict, List
+from typing import Dict, Generator, List, Any
 import datetime
 from utils.program_paths import ProgramPaths
 from db.tag_db import TagDB
@@ -65,7 +65,7 @@ class ProblemDB:
             raise Exception("Failed to open database:", e)
 
     @staticmethod
-    def get_all_problems():
+    def get_all_problems() -> Generator[dict[str, Any], None, None]:
         """
         Generator function that returns a dictionary containing all the data of
         a single problem for each iteration.
