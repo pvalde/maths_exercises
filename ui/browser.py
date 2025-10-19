@@ -67,19 +67,20 @@ class BrowserWindow(
                 ["question", "solution", "deck", "creation date"]
             )
 
-            list_of_problems = ProblemDB.get_all_problems()
-            qtablewidget.setRowCount(len(list_of_problems))
+            problems = ProblemDB.get_all_problems()
 
-            for i in range(len(list_of_problems)):
-                deck = DeckDB.get_deck_by_id(list_of_problems[i][6])
-                problem_content = json.loads(list_of_problems[i][7])
-                date = list_of_problems[i][8]
+            i = 0
+            for problem in problems:
+
+                qtablewidget.setRowCount(i + 1)
+                deck = DeckDB.get_deck_by_id(problem["problem_deck"])
+                content = json.loads(problem["problem_content"])
+                date = problem["problem_creation_date"]
 
                 qtablewidget.setItem(
-                    i, 0, QTableWidgetItem(problem_content["question"])
+                    i, 0, QTableWidgetItem(content["question"])
                 )
-                qtablewidget.setItem(
-                    i, 1, QTableWidgetItem(problem_content["answer"])
-                )
+                qtablewidget.setItem(i, 1, QTableWidgetItem(content["answer"]))
                 qtablewidget.setItem(i, 2, QTableWidgetItem(deck))
                 qtablewidget.setItem(i, 3, QTableWidgetItem(date))
+                i += 1
