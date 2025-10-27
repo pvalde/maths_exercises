@@ -1,20 +1,22 @@
+import json
+from typing import Dict, Tuple, override
+
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QCloseEvent
 from PySide6.QtWidgets import (
-    QTreeWidget,
-    QTreeWidgetItem,
-    QWidget,
     QHBoxLayout,
     QTableWidget,
     QTableWidgetItem,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QWidget,
 )
-from PySide6.QtCore import Signal
-from PySide6.QtGui import QCloseEvent
-import json
-from typing import Dict, override, Tuple
-from db.tag_db import TagDB
-from utils.constants import PROGRAM_NAME
-from db.problem_db import ProblemDB
+
 from db.deck_db import DeckDB
+from db.problem_db import ProblemDB
+from db.tag_db import TagDB
 from ui.ui_utils import DeckUpdReciever, ProblemsUpdReciever, TagsUpdReciever
+from utils.constants import PROGRAM_NAME
 
 
 class BrowserWindow(
@@ -51,8 +53,8 @@ class BrowserWindow(
             self.main_subwidgets["categories_selector"] = qtreewidget
             self._update_tree_selector()
             self.main_subwidgets["categories_selector"].itemClicked.connect(
-                        self._apply_filter_from_tree_selector
-                    )
+                self._apply_filter_from_tree_selector
+            )
 
     def _apply_filter_from_tree_selector(self):
         tree_selector = self.main_subwidgets["categories_selector"]
@@ -64,7 +66,7 @@ class BrowserWindow(
 
         current_type_of_item = ""
         current_parent: QTreeWidgetItem = current_item.parent()
-        while (True):
+        while True:
             if current_parent is not None:
                 if current_parent.text(0) == "decks":
                     current_type_of_item = "deck"
@@ -73,7 +75,7 @@ class BrowserWindow(
                     current_type_of_item = "tag"
                     break
             else:
-                return # do nothing
+                return  # do nothing
 
         type_of_filter = current_type_of_item
         filter = current_item.text(0)
@@ -87,6 +89,7 @@ class BrowserWindow(
             categories_selector, QTreeWidget
         ):
             categories_selector.clear()
+            categories_selector.setHeaderLabel("Category")
             all_item = QTreeWidgetItem()
             all_item.setText(0, "all")
             decks_item = QTreeWidgetItem()
@@ -129,16 +132,16 @@ class BrowserWindow(
         self._update_tree_selector()
 
     def _update_qtablewidget(self, filter: Tuple[str, str] | None = None):
-        
+
         qtablewidget = self.main_subwidgets.get("qtablewidget", None)
         if qtablewidget is not None and isinstance(qtablewidget, QTableWidget):
-            
+
             if filter is not None:
                 if filter[0] == "deck":
                     problems = ProblemDB.get_problems_by_deck(filter[1])
                 else:
-                    problems = ProblemDB.get_all_problems()
-                    # change for problems = ProblemDB.get_problems_by_tag(filter[1])
+                    problems = ProblemDB.get_problems_by_tag(filter[1])
+
             else:
                 problems = ProblemDB.get_all_problems()
 

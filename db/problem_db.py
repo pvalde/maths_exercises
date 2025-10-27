@@ -1,9 +1,10 @@
-import sqlite3
-import json
-from typing import Dict, Generator, List, Any
 import datetime
-from utils.program_paths import ProgramPaths
+import json
+import sqlite3
+from typing import Any, Dict, Generator, List
+
 from db.tag_db import TagDB
+from utils.program_paths import ProgramPaths
 
 
 class ProblemDB:
@@ -29,12 +30,16 @@ class ProblemDB:
 
                 cursor.execute(
                     """
-                        INSERT INTO problems (problem_content, problem_deck, problem_creation_date)
-                                VALUES(
-                                    ?,
-                                    (SELECT deck_id FROM decks WHERE deck_name = ?),
-                                    ?
-                                );
+                    INSERT INTO problems (
+                        problem_content, 
+                        problem_deck, 
+                        problem_creation_date
+                    )
+                    VALUES(
+                        ?,
+                        (SELECT deck_id FROM decks WHERE deck_name = ?),
+                        ?
+                    );
                     """,
                     (
                         content_json,
@@ -48,11 +53,17 @@ class ProblemDB:
                         # add info th problems_tags table
                         cursor.execute(
                             """
-                                INSERT INTO problems_tags (problem_id, tag_id)
-                                    VALUES (
-                                        (SELECT problem_id FROM problems WHERE problem_content = ? ),
-                                        (SELECT tag_id FROM tags WHERE tag_name = ?)
-                                    );
+                            INSERT INTO problems_tags (problem_id, tag_id)
+                            VALUES (
+                                (
+                                    SELECT problem_id FROM problems
+                                    WHERE problem_content = ? 
+                                ),
+                                (
+                                    SELECT tag_id FROM tags
+                                    WHERE tag_name = ?
+                                )
+                            );
                             """,
                             (content_json, tag),
                         )
@@ -94,7 +105,9 @@ class ProblemDB:
             raise Exception("Failed to open database:", e)
 
     @staticmethod
-    def get_problems_by_deck(deck_name: str) -> Generator[dict[str, Any], None, None]:
+    def get_problems_by_deck(
+        deck_name: str,
+    ) -> Generator[dict[str, Any], None, None]:
         """
         Generator function that returns a dictionary containing all the data of
         a single problem for each iteration, where the problem's deck is
@@ -108,13 +121,18 @@ class ProblemDB:
                 cursor = connection.cursor()
                 cursor.execute("PRAGMA foreign_keys = ON;")
 
-                problems = cursor.execute("""
-                        SELECT * FROM problems
-                        WHERE problem_deck = 
-                            (SELECT deck_id FROM decks WHERE deck_name = ?)
-                        """, (deck_name,))
-                
-                #iteration process:
+                problems = cursor.execute(
+                    """
+                    SELECT * FROM problems WHERE problem_deck =
+                        (
+                            SELECT deck_id FROM decks
+                            WHERE deck_name = ?
+                        )
+                    """,
+                    (deck_name,),
+                )
+
+                # iteration process:
                 for problem in problems:
                     problem_dict = {}
                     for key in problem.keys():
@@ -122,39 +140,54 @@ class ProblemDB:
                     yield problem_dict
         except sqlite3.Error as e:
             raise Exception("Failed to open database:", e)
-    
 
-    # @staticmethod
-    # def get_problems_by_tag(tag_name: str) -> Generator[dict[str, Any], None, None]:
-    #     """
-    #     Generator function that returns a dictionary
-    #     """
-    #     try:
-    #         with sqlite3.connect(
-    #             ProgramPaths.get_user_db_path()
-    #         ) as connection:
-    #             connection.row_factory = sqlite3.Row
-    #             cursor = connection.cursor()
-    #             cursor.execute("PRAGMA foreign_keys = ON;")
-    #             
-    #             cursor.execute("""
-    #                     SELECT problem_id FROM problems_tags
-    #                     WHERE tag_id = (SELECT tag_id FROM tags WHERE tag = ?)
-    #                     """, (tag_name,))
-    #             
-    #             problem_id = cursor.fetchone()
-    #             while problem_id is not None:
-    #                 print(problem_id[0])
-    #                 id = problem_id[0]
-    #                 problem = cursor.execute(
-    #                         "SELECT * FROM problems WHERE problem_id = ?",
-    #                         (id,))
+    @staticmethod
+    def get_problems_by_tag(
+        tag_name: str,
+    ) -> Generator[dict[str, Any], None, None]:
+        """
+        Generator function that returns a dictionary containing all the data of
+        a single problem for each iteration, where one of the problem's tag is
+        'tag_name'.
+        """
+        try:
+            with sqlite3.connect(
+                ProgramPaths.get_user_db_path()
+            ) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = connection.cursor()
+                cursor.execute("PRAGMA foreign_keys = ON;")
 
-    #                 problem_dict = {}
-    #                 for key in problem.keys():
-    #                     problem_dict[key] = problem[key]
-    #                 yield problem_dict
+                rows = cursor.execute(
+                    """
+                    SELECT problem_id FROM problems_tags WHERE tag_id =
+                       (
+                           SELECT tag_id FROM tags WHERE tag_name = ?
+                       ) 
+                    """,
+                    (tag_name,),
+                )
 
-    #     except sqlite3.Error as e:
-    #         raise Exception("Failed to open database:", e)
+            with sqlite3.connect(
+                ProgramPaths.get_user_db_path()
+            ) as connection:
+                connection.row_factory = sqlite3.Row
+                cursor = connection.cursor()
+                cursor.execute("PRAGMA foreign_keys = ON;")
+                for row in rows:
+                    problem_id = row[0]
+                    problem_row = cursor.execute(
+                        """
+                        SELECT * FROM problems where problem_id = ?
+                        """,
+                        (problem_id,),
+                    )
+                    problem_dict = {}
+                    for problem in problem_row:
+                        for key in problem.keys():
+                            problem_dict[key] = problem[key]
 
+                    yield problem_dict
+
+        except sqlite3.Error as e:
+            raise Exception("Failed to open database:", e)
