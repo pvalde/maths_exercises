@@ -14,11 +14,11 @@ from db.tag_db import TagDB
 from utils.constants import PROGRAM_NAME
 from db.problem_db import ProblemDB
 from db.deck_db import DeckDB
-from ui.ui_utils import DeckUpdReciever, ProblemsUpdReciever
+from ui.ui_utils import DeckUpdReciever, ProblemsUpdReciever, TagsUpdReciever
 
 
 class BrowserWindow(
-    QWidget, ProblemsUpdReciever, DeckUpdReciever
+    QWidget, ProblemsUpdReciever, DeckUpdReciever, TagsUpdReciever
 ):  # TODO: should be problem upd reciever
     closed = Signal(bool)
 
@@ -78,43 +78,6 @@ class BrowserWindow(
                 tag_item.setText(0, tag)
                 tags_item.addChild(tag_item)
 
-    # def _add_categories_selector(self) -> None:
-    #     """
-    #     Configures the categories selector for BrowserWindow.
-    #     """
-    #     # tags selector
-    #     tags_qlistwidget = self.categories_selector_subwidgets.get(
-    #         "tagsqlistwidget", None
-    #     )
-    #     tags_list_widget = QListWidget(sortingEnabled=True)
-    #     if tags_qlistwidget is None:
-    #         self.categories_selector_subwidgets["tags_qlistwidget"] = (
-    #             tags_list_widget
-    #         )
-    #         self._update_tags_qlistwidget()
-
-    #     # decks selector
-    #     decks_qlistwidget = self.categories_selector_subwidgets.get(
-    #         "decks_qlistwidget", None
-    #     )
-    #     decks_list_widget = QListWidget(sortingEnabled=True)
-    #     if decks_qlistwidget is None:
-    #         self.categories_selector_subwidgets["decks_qlistwidget"] = (
-    #             decks_list_widget
-    #         )
-    #         self._update_decks_qlistwidget()
-
-    #     # main cateogires selector
-    #     main_widget = self.main_subwidgets.get("categories_selector", None)
-    #     qwidget = QWidget()
-    #     if main_widget is None:
-    #         self.main_subwidgets["categories_selector"] = qwidget
-
-    #     layout = QVBoxLayout()
-    #     qwidget.setLayout(layout)
-    #     layout.addWidget(tags_list_widget)
-    #     layout.addWidget(decks_list_widget)
-
     def _add_table_widget(self) -> None:
         qtablewidget = self.main_subwidgets.get("qtablewidget", None)
         table_widget = QTableWidget()
@@ -160,3 +123,7 @@ class BrowserWindow(
                 qtablewidget.setItem(i, 2, QTableWidgetItem(deck))
                 qtablewidget.setItem(i, 3, QTableWidgetItem(date))
                 i += 1
+
+    @override
+    def tags_updated_reciever(self):
+        self._update_tree_selector()

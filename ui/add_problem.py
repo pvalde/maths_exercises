@@ -21,7 +21,12 @@ from PySide6.QtWidgets import (
 
 from db.deck_db import DeckDB
 from db.problem_db import ProblemDB
-from ui.ui_utils import NoInternetProfile, DeckUpdReciever, ProblemsUpdEmitter
+from ui.ui_utils import (
+    NoInternetProfile,
+    DeckUpdReciever,
+    ProblemsUpdEmitter,
+    TagsUpdEmitter,
+)
 
 # CONSTANTS
 from utils.constants import (
@@ -109,9 +114,7 @@ class TagSelectorWidget(QWidget):
             q_layout_item: QLayoutItem | None = (
                 self.tags_container_layout.itemAt(i)
             )
-            if q_layout_item is None:
-                pass
-            else:
+            if q_layout_item is not None:
                 self.tags_container_layout.removeItem(q_layout_item)
 
     def tags(self) -> List[str]:
@@ -139,13 +142,16 @@ class TagSelectorWidget(QWidget):
         return tags
 
 
-class AddProblemWindow(QWidget, DeckUpdReciever, ProblemsUpdEmitter):
+class AddProblemWindow(
+    QWidget, DeckUpdReciever, ProblemsUpdEmitter, TagsUpdEmitter
+):
     """
     Window for adding new 'exercises' to the database.
     """
 
     closed = Signal(bool)
     problem_added = Signal(bool)
+    tags_updated = Signal(bool)
 
     def __init__(self):
         """ """
@@ -263,6 +269,7 @@ class AddProblemWindow(QWidget, DeckUpdReciever, ProblemsUpdEmitter):
                 deck=self.deck_selector.currentText(),
                 tags=tags,
             )
+            self.tags_updated_emitter()
 
         else:
             ProblemDB.add_problem(
@@ -326,6 +333,10 @@ class AddProblemWindow(QWidget, DeckUpdReciever, ProblemsUpdEmitter):
     @override
     def problems_updated_emitter(self):
         self.problem_added.emit(True)
+
+    @override
+    def tags_updated_emitter(self) -> None:
+        self.tags_updated.emit(True)
 
 
 class DeckSelector(QComboBox, DeckUpdReciever):

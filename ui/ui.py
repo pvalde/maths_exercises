@@ -22,6 +22,8 @@ from ui.ui_utils import (
     DeckUpdReciever,
     ProblemsUpdReciever,
     ProblemsUpdEmitter,
+    TagsUpdReciever,
+    TagsUpdEmitter,
 )
 from utils.program_paths import ProgramPaths
 from utils.constants import PROGRAM_NAME
@@ -35,6 +37,8 @@ class MainWindow(
     DeckUpdReciever,
     ProblemsUpdReciever,
     ProblemsUpdEmitter,
+    TagsUpdEmitter,
+    TagsUpdReciever,
 ):
     decks_updated = Signal()
 
@@ -153,6 +157,9 @@ class MainWindow(
             self.child_window["add_problem"].problem_added.connect(
                 self.problems_updated_emitter
             )
+            self.child_window["add_problem"].tags_updated.connect(
+                self.tags_updated_reciever
+            )
 
         # to avoid pyright error
         if self.child_window["add_problem"] is not None:
@@ -199,6 +206,16 @@ class MainWindow(
     def problems_updated_emitter(self) -> None:
         for element in self.problems_updated_recievers:
             element.problems_updated_reciever()
+
+    @override
+    def tags_updated_emitter(self) -> None:
+        for window in self.child_window.values():
+            if window is not None and isinstance(window, TagsUpdReciever):
+                window.tags_updated_reciever()
+
+    @override
+    def tags_updated_reciever(self) -> None:
+        self.tags_updated_emitter()
 
 
 def initializeGui():

@@ -70,3 +70,17 @@ class ProblemsUpdReciever(ABC, metaclass=QABCMeta):
     @abstractmethod
     def problems_updated_reciever(self) -> None:
         pass
+
+
+class TagsUpdEmitter(ABC, metaclass=QABCMeta):
+    @abstractmethod
+    def tags_updated_emitter(self) -> None:
+        pass
+
+
+class TagsUpdReciever(ABC, metaclass=QABCMeta):
+    @abstractmethod
+    def tags_updated_reciever(self) -> None:
+        pass
+
+# TODO: Distinguish between emitters and propagators!
